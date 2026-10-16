@@ -1,0 +1,914 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b080d">
+<title>Blow-Out Birthday Cake</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=Kalam:wght@400;700&family=Shrikhand&display=swap">
+<style>
+:root{
+  /* full-screen candlelit scene, controls docked at the bottom, the card rises over the cake at the end */
+  --room:#0b080d;
+  --cream:#f5e9d6;
+  --cream-dim:#bcab99;
+  --flame:#ffb547;
+  --flame-deep:#ff7a2f;
+  --on-flame:#2a1408;
+  --cherry:#c62a43;
+  --cherry-ink:#a51f36;
+  --paper:#f7eedf;
+  --paper-ink:#2b1610;
+  --tape:rgba(140,196,150,.78);
+  --glass:rgba(22,15,20,.78);
+  --line:rgba(245,233,214,.14);
+  --track:rgba(245,233,214,.1);
+  --f-display:"Shrikhand","Cooper Black",Georgia,serif;
+  --f-ui:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-note:"Kalam","Segoe Print","Comic Sans MS",cursive;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--room);color:var(--cream);font-family:var(--f-ui);overflow:hidden;-webkit-tap-highlight-color:transparent}
+#scene,#confetti{position:fixed;inset:0;width:100%;height:100%;display:block}
+#scene{touch-action:none;cursor:grab}
+#scene.dragging{cursor:grabbing}
+#confetti{pointer-events:none;z-index:2}
+
+.mute{position:fixed;z-index:5;top:calc(12px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px));width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:var(--glass);border:1px solid var(--line);color:var(--cream);cursor:pointer;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.mute svg{width:20px;height:20px}
+
+.dock,.note-wrap{position:fixed;left:0;right:0;bottom:0;z-index:4;display:flex;justify-content:center;pointer-events:none;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+.panel{pointer-events:auto;width:100%;max-width:30rem;display:grid;gap:12px;padding:18px 20px 20px;background:var(--glass);border:1px solid var(--line);border-radius:18px;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.eyebrow{margin:0;font-size:.72rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--flame)}
+.display{margin:0;font-family:var(--f-display);font-weight:400;line-height:1.08;text-wrap:balance}
+h1.display{font-size:clamp(1.7rem,6.4vw,2.3rem);color:var(--cream)}
+.lede{margin:0;max-width:60ch;font-size:.97rem;line-height:1.5;color:var(--cream-dim)}
+.fine{margin:0;font-size:.76rem;line-height:1.45;color:var(--cream-dim)}
+.row{display:flex;flex-wrap:wrap;gap:10px}
+
+.btn{font:inherit;font-size:.95rem;font-weight:600;border-radius:999px;padding:12px 18px;border:1px solid transparent;cursor:pointer;transition:transform .12s ease,background-color .2s ease,filter .2s ease;-webkit-user-select:none;user-select:none}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:focus-visible,.mute:focus-visible{outline:2px solid var(--flame);outline-offset:3px}
+.primary{background:var(--flame);color:var(--on-flame)}
+.primary:hover{filter:brightness(1.07)}
+.ghost{background:transparent;color:var(--cream);border-color:var(--line)}
+.ghost:hover{border-color:var(--cream-dim)}
+
+.status-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.status{margin:0;font-size:1.05rem;font-weight:600;min-width:0}
+.count{margin:0;font-size:.85rem;color:var(--cream-dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+.meter{position:relative;height:10px;border-radius:99px;background:var(--track);overflow:hidden}
+.meter-fill{position:absolute;inset:0;transform-origin:left center;transform:scaleX(0);background:linear-gradient(90deg,var(--flame-deep),var(--flame))}
+.meter-mark{position:absolute;top:0;bottom:0;width:2px;left:30%;background:var(--cream);opacity:.55}
+.hold{width:100%;background:transparent;color:var(--cream-dim);border-color:var(--line);font-size:.85rem;padding:10px 16px;touch-action:none;-webkit-touch-callout:none}
+.hold.main{background:var(--flame);color:var(--on-flame);border-color:transparent;font-size:1.05rem;padding:16px 18px}
+.hold.active{transform:scale(.97);filter:brightness(1.12)}
+.hold:not(.main).active{border-color:var(--flame);color:var(--cream)}
+
+.wish{position:fixed;inset:0;z-index:3;display:grid;place-items:center;pointer-events:none;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-bottom:30vh;font-family:var(--f-display);font-size:clamp(2.6rem,11vw,5rem);color:var(--cream);text-align:center;text-shadow:0 0 34px rgba(255,181,71,.55);opacity:0;transform:scale(.96);transition:opacity .6s ease,transform 1.4s ease}
+.wish.show{opacity:1;transform:scale(1)}
+
+.note{pointer-events:auto;position:relative;width:100%;max-width:26rem;display:grid;gap:12px;padding:30px 24px 22px;background:var(--paper);color:var(--paper-ink);border-radius:4px;transform:rotate(-1.2deg);box-shadow:0 26px 60px -18px rgba(0,0,0,.75),0 2px 0 rgba(0,0,0,.08);animation:rise .8s cubic-bezier(.2,.8,.2,1) both}
+.note::before{content:"";position:absolute;top:-12px;left:50%;width:96px;height:26px;transform:translateX(-50%) rotate(2.5deg);background:var(--tape);box-shadow:0 1px 2px rgba(0,0,0,.18)}
+.note h2{font-size:clamp(1.6rem,6vw,2.05rem);color:var(--cherry-ink)}
+.note-msg{margin:0;font-family:var(--f-note);font-size:1.18rem;line-height:1.45}
+.note-sign{margin:0;font-family:var(--f-note);font-weight:700;font-size:1.15rem;text-align:right}
+.again{justify-self:start;background:var(--paper-ink);color:var(--paper)}
+.again:focus-visible{outline-color:var(--cherry-ink)}
+@keyframes rise{from{opacity:0;transform:translateY(40px) rotate(2deg)}to{opacity:1;transform:translateY(0) rotate(-1.2deg)}}
+
+@media (min-width:720px){
+  .panel{padding:22px 24px 24px}
+}
+@media (prefers-reduced-motion:reduce){
+  .note{animation:none}
+  .wish{transition:opacity .3s ease}
+}
+</style>
+</head>
+<body>
+<canvas id="scene" aria-label="A birthday cake with lit candles"></canvas>
+<canvas id="confetti" aria-hidden="true"></canvas>
+
+<button id="mute" class="mute" type="button" aria-label="Mute sound" aria-pressed="false">
+  <svg id="iconOn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+  <svg id="iconOff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M11 5 6 9H3v6h3l5 4z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/></svg>
+</button>
+
+<div class="dock">
+  <section class="panel" id="introPanel">
+    <p class="eyebrow" id="introEyebrow">For Olie · from Bryan</p>
+    <h1 class="display">Make a wish, then blow.</h1>
+    <p class="lede" id="lede">This cake can hear you. Turn on the mic and blow the candles out like it's a real cake.</p>
+    <div class="row">
+      <button id="startMic" class="btn primary" type="button">Turn on the microphone</button>
+      <button id="startHold" class="btn ghost" type="button">No mic? Use a button</button>
+    </div>
+    <p class="fine">The mic only listens for your breath. Nothing gets recorded or sent anywhere.</p>
+  </section>
+
+  <section class="panel" id="playPanel" hidden>
+    <div class="status-row">
+      <p class="status" id="status" aria-live="polite">Blow into the microphone.</p>
+      <p class="count" id="count">7 of 7 still burning</p>
+    </div>
+    <div class="meter" aria-hidden="true"><div class="meter-fill" id="meterFill"></div><div class="meter-mark" id="meterMark"></div></div>
+    <button id="hold" class="btn hold" type="button">Mic not working? Hold here to blow</button>
+  </section>
+</div>
+
+<div class="wish" id="wish" aria-hidden="true">Wish made.</div>
+
+<div class="note-wrap" id="noteWrap" hidden>
+  <article class="note" aria-live="polite">
+    <h2 class="display" id="noteTitle">Happy birthday!</h2>
+    <p class="note-msg" id="noteMsg"></p>
+    <p class="note-sign" id="noteSign"></p>
+    <button id="again" class="btn again" type="button">Light them again</button>
+  </article>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function () {
+"use strict";
+
+// ---------- edit these ----------
+const CONFIG = {
+  name: "Olie",       // written on top of the cake
+  age: 17,            // for "Happy 17th birthday", set to 0 to leave the number out
+  from: "Bryan",
+  candles: 7,         // 1 to 14
+  message: "Seventeen looks good on you. Thanks for another year of late-night calls, terrible jokes and pretending to study together. The next es teh is on me.",
+  sensitivity: 1      // 1.5 if blowing barely does anything, 0.7 if talking blows them out
+};
+// --------------------------------
+
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const coarse = matchMedia("(pointer: coarse)").matches;
+const N = clamp(Math.round(CONFIG.candles) || 1, 1, 14);
+
+function ordinal(n) {
+  const s = ["th", "st", "nd", "rd"], v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+document.title = CONFIG.name + "'s Birthday Cake";
+$("introEyebrow").textContent = "For " + CONFIG.name + " · from " + CONFIG.from;
+$("noteTitle").textContent = CONFIG.age ? "Happy " + ordinal(CONFIG.age) + " birthday, " + CONFIG.name + "!" : "Happy birthday, " + CONFIG.name + "!";
+$("noteMsg").textContent = CONFIG.message;
+$("noteSign").textContent = "from " + CONFIG.from;
+if (coarse) $("lede").textContent = "This cake can hear you. Turn on the mic and blow at the bottom of your phone like it's a real cake.";
+
+function failScene() {
+  $("lede").textContent = "The cake couldn't load. Check the internet connection and refresh the page.";
+  $("startMic").disabled = true;
+  $("startHold").disabled = true;
+}
+if (!window.THREE) { failScene(); return; }
+
+// ---------- renderer ----------
+const canvas = $("scene");
+let renderer;
+try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true }); }
+catch (e) { failScene(); return; }
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+const maxAniso = renderer.capabilities.getMaxAnisotropy();
+
+const lin = hex => new THREE.Color(hex).convertSRGBToLinear();
+const scene = new THREE.Scene();
+const BG_DARK = new THREE.Color("#0b080d"), BG_LIT = new THREE.Color("#2d1d29");
+const FOG_DARK = lin("#0b080d"), FOG_LIT = lin("#2d1d29");
+scene.background = BG_DARK.clone();
+scene.fog = new THREE.Fog(FOG_DARK.clone(), 9, 20);
+const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+const rand = mulberry32(1710);
+
+function canvasTex(w, h, draw, srgb = true) {
+  const c = document.createElement("canvas");
+  c.width = w; c.height = h;
+  draw(c.getContext("2d"), w, h);
+  const t = new THREE.CanvasTexture(c);
+  if (srgb) t.encoding = THREE.sRGBEncoding;
+  t.anisotropy = maxAniso;
+  return t;
+}
+function blob(g, cx, cy, rx, ry, stops) {
+  g.save(); g.translate(cx, cy); g.scale(1, ry / rx);
+  const gr = g.createRadialGradient(0, 0, 0, 0, 0, rx);
+  stops.forEach(([o, c]) => gr.addColorStop(o, c));
+  g.fillStyle = gr; g.beginPath(); g.arc(0, 0, rx, 0, Math.PI * 2); g.fill(); g.restore();
+}
+
+// ---------- textures ----------
+const flameTex = canvasTex(64, 160, g => {
+  g.globalCompositeOperation = "lighter";
+  blob(g, 32, 112, 24, 44, [[0, "rgba(255,214,140,0.95)"], [0.45, "rgba(255,150,50,0.7)"], [0.8, "rgba(255,80,20,0.18)"], [1, "rgba(255,60,0,0)"]]);
+  blob(g, 32, 74, 13, 62, [[0, "rgba(255,200,110,0.7)"], [0.6, "rgba(255,120,40,0.25)"], [1, "rgba(255,80,0,0)"]]);
+  blob(g, 32, 142, 9, 12, [[0, "rgba(110,140,255,0.55)"], [1, "rgba(80,100,255,0)"]]);
+});
+const coreTex = canvasTex(64, 160, g => {
+  blob(g, 32, 118, 11, 28, [[0, "rgba(255,255,245,1)"], [0.5, "rgba(255,240,190,0.8)"], [1, "rgba(255,220,150,0)"]]);
+});
+const glowTex = canvasTex(128, 128, (g, w) => {
+  blob(g, w / 2, w / 2, w / 2, w / 2, [[0, "rgba(255,180,90,0.55)"], [0.3, "rgba(255,140,60,0.18)"], [1, "rgba(255,120,40,0)"]]);
+});
+const emberTex = canvasTex(32, 32, g => {
+  blob(g, 16, 16, 16, 16, [[0, "rgba(255,170,80,1)"], [0.4, "rgba(255,90,30,0.6)"], [1, "rgba(255,60,0,0)"]]);
+});
+const smokeTex = canvasTex(64, 64, g => {
+  blob(g, 32, 32, 32, 32, [[0, "rgba(205,200,212,0.55)"], [0.5, "rgba(175,170,185,0.22)"], [1, "rgba(160,155,170,0)"]]);
+});
+const shadowTex = canvasTex(256, 256, g => {
+  blob(g, 128, 128, 128, 128, [[0, "rgba(0,0,0,0.7)"], [0.5, "rgba(0,0,0,0.4)"], [1, "rgba(0,0,0,0)"]]);
+});
+const chocoTex = canvasTex(512, 128, (g, w, h) => {
+  g.fillStyle = "#6a3a27"; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 900; i++) {
+    const x = rand() * w, ww = 0.6 + rand() * 2.4;
+    g.fillStyle = rand() < 0.5 ? "rgba(40,18,10," + (0.15 + rand() * 0.35) + ")" : "rgba(150,95,65," + (0.08 + rand() * 0.25) + ")";
+    g.fillRect(x, rand() * h * 0.3, ww, h * (0.5 + rand() * 0.6));
+  }
+});
+chocoTex.wrapS = THREE.RepeatWrapping;
+chocoTex.repeat.set(4, 1);
+function stripeTex(a, b) {
+  const t = canvasTex(64, 256, (g, w, h) => {
+    g.fillStyle = a; g.fillRect(0, 0, w, h);
+    g.fillStyle = b; g.save(); g.translate(w / 2, h / 2); g.rotate(-0.5);
+    for (let y = -h; y < h; y += 36) g.fillRect(-w * 3, y, w * 6, 13);
+    g.restore();
+  });
+  t.wrapS = THREE.RepeatWrapping;
+  return t;
+}
+
+// ---------- lights ----------
+const ambient = new THREE.AmbientLight(lin("#3a2a40"), 0.14);
+const hemi = new THREE.HemisphereLight(lin("#ffe2c9"), lin("#2a1a24"), 0);
+const rim = new THREE.DirectionalLight(lin("#8a84ff"), 0.4);
+rim.position.set(-4, 5, -5);
+const candleLight = new THREE.PointLight(lin("#ffb04a"), 0, 9, 2);
+const frontFill = new THREE.PointLight(lin("#ff9a50"), 0, 8, 2);
+frontFill.position.set(0, 1.3, 2.7);
+scene.add(ambient, hemi, rim, candleLight, frontFill);
+
+// ---------- table ----------
+const table = new THREE.Mesh(new THREE.CircleGeometry(16, 64), new THREE.MeshStandardMaterial({ color: lin("#2a1a20"), roughness: 0.95 }));
+table.rotation.x = -Math.PI / 2;
+scene.add(table);
+const shadow = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 4.6), new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false }));
+shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.003;
+scene.add(shadow);
+
+// ---------- cake ----------
+const cake = new THREE.Group();
+scene.add(cake);
+const chocoMat = new THREE.MeshStandardMaterial({ color: lin("#a06a52"), map: chocoTex, bumpMap: chocoTex, bumpScale: 0.012, roughness: 0.62 });
+const creamMat = new THREE.MeshStandardMaterial({ color: lin("#f7ecdb"), roughness: 0.5, side: THREE.DoubleSide });
+const cherryMat = new THREE.MeshStandardMaterial({ color: lin("#b0142e"), roughness: 0.18, emissive: lin("#2a0006") });
+const stemMat = new THREE.MeshStandardMaterial({ color: lin("#4d5a2c"), roughness: 0.8 });
+const boardMat = new THREE.MeshStandardMaterial({ color: lin("#c9a35a"), roughness: 0.35, metalness: 0.55 });
+
+const BOARD_H = 0.07, B_R = 1.35, B_H = 0.85, T_R = 1.0, T_H = 0.7, CAP = 0.03;
+const bTop = BOARD_H + B_H;
+const tBase = bTop + CAP;
+const tTop = tBase + T_H;
+const tSurface = tTop + CAP;
+
+const board = new THREE.Mesh(new THREE.CylinderGeometry(1.62, 1.64, BOARD_H, 96), boardMat);
+board.position.y = BOARD_H / 2;
+cake.add(board);
+
+function tier(R, H, baseY, dripMax, seed) {
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(R, R, H, 96), chocoMat);
+  body.position.y = baseY + H / 2;
+  cake.add(body);
+
+  // cream drip: an open cylinder whose lower edge follows a wavy length profile
+  const r = mulberry32(seed);
+  const count = 11 + Math.floor(r() * 5);
+  const drips = [];
+  for (let i = 0; i < count; i++) drips.push({ c: (i + r() * 0.6) / count * Math.PI * 2 - Math.PI, w: 0.07 + r() * 0.09, l: (0.25 + r() * 0.75) * dripMax });
+  const base = dripMax * 0.16;
+  const len = th => {
+    let m = base + Math.sin(th * 23) * 0.006;
+    for (const d of drips) {
+      let dd = Math.abs(th - d.c); dd = Math.min(dd, Math.PI * 2 - dd);
+      if (dd < d.w) { const v = d.l * Math.sqrt(1 - (dd / d.w) ** 2); if (v > m) m = v; }
+    }
+    return m;
+  };
+  const topY = baseY + H;
+  const geo = new THREE.CylinderGeometry(R + 0.012, R + 0.012, 1, 256, 24, true);
+  const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const t = p.getY(i) + 0.5;
+    p.setY(i, topY - (1 - t) * len(Math.atan2(p.getZ(i), p.getX(i))));
+  }
+  geo.computeVertexNormals();
+  cake.add(new THREE.Mesh(geo, creamMat));
+
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(R + 0.012, R + 0.012, CAP, 128), creamMat);
+  cap.position.y = topY + CAP / 2;
+  cake.add(cap);
+  const lip = new THREE.Mesh(new THREE.TorusGeometry(R - 0.004, 0.03, 12, 128), creamMat);
+  lip.rotation.x = Math.PI / 2; lip.position.y = topY + CAP * 0.7;
+  cake.add(lip);
+}
+tier(B_R, B_H, BOARD_H, 0.5, 11);
+tier(T_R, T_H, tBase, 0.42, 29);
+
+// piped rosettes with a cherry each, round the lower ledge
+const rosetteGeo = (() => {
+  const pts = [[0, 0], [0.09, 0.01], [0.095, 0.045], [0.08, 0.09], [0.055, 0.125], [0.025, 0.15], [0, 0.165]].map(([x, y]) => new THREE.Vector2(x, y));
+  const g = new THREE.LatheGeometry(pts, 48);
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+    const th = Math.atan2(z, x);
+    const k = 1 + 0.15 * Math.cos(8 * (th + y * 9));
+    p.setX(i, x * k); p.setZ(i, z * k);
+  }
+  g.computeVertexNormals();
+  return g;
+})();
+const cherryGeo = new THREE.SphereGeometry(0.068, 24, 18);
+const stemGeo = new THREE.CylinderGeometry(0.006, 0.005, 0.12, 6);
+const ROSETTES = 14;
+for (let i = 0; i < ROSETTES; i++) {
+  const a = (i + 0.5) / ROSETTES * Math.PI * 2;
+  const x = Math.cos(a) * 1.18, z = Math.sin(a) * 1.18;
+  const ro = new THREE.Mesh(rosetteGeo, creamMat);
+  ro.position.set(x, bTop + CAP - 0.005, z);
+  ro.rotation.y = rand() * 6.28;
+  cake.add(ro);
+  const ch = new THREE.Mesh(cherryGeo, cherryMat);
+  ch.scale.set(1, 0.92, 1);
+  ch.position.set(x, bTop + CAP + 0.2, z);
+  cake.add(ch);
+  const st = new THREE.Mesh(stemGeo, stemMat);
+  st.position.set(x + 0.02, bTop + CAP + 0.3, z);
+  st.rotation.z = -0.45; st.rotation.y = rand() * 6.28;
+  cake.add(st);
+}
+
+// name piped on top in chocolate
+const nameCanvas = document.createElement("canvas");
+nameCanvas.width = 1024; nameCanvas.height = 384;
+const nameTex = new THREE.CanvasTexture(nameCanvas);
+nameTex.encoding = THREE.sRGBEncoding;
+nameTex.anisotropy = maxAniso;
+function drawName() {
+  const g = nameCanvas.getContext("2d"), txt = CONFIG.name;
+  g.clearRect(0, 0, 1024, 384);
+  g.textAlign = "center"; g.textBaseline = "middle";
+  let size = 210;
+  for (; size > 60; size -= 8) {
+    g.font = size + 'px "Shrikhand", Georgia, serif';
+    if (g.measureText(txt).width < 900) break;
+  }
+  g.lineJoin = "round";
+  g.lineWidth = size * 0.09;
+  g.strokeStyle = "rgba(40,18,8,0.95)";
+  g.fillStyle = "#5c2d18";
+  g.strokeText(txt, 512, 200);
+  g.fillText(txt, 512, 200);
+  g.save();
+  g.globalCompositeOperation = "source-atop";
+  const gr = g.createLinearGradient(0, 110, 0, 300);
+  gr.addColorStop(0, "rgba(255,225,195,0.4)");
+  gr.addColorStop(0.45, "rgba(255,225,195,0)");
+  g.fillStyle = gr; g.fillRect(0, 0, 1024, 384);
+  g.restore();
+  nameTex.needsUpdate = true;
+}
+drawName();
+if (document.fonts && document.fonts.load) document.fonts.load('200px "Shrikhand"').then(drawName, () => {});
+const namePlate = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.5625), new THREE.MeshStandardMaterial({ map: nameTex, transparent: true, depthWrite: false, roughness: 0.3, polygonOffset: true, polygonOffsetFactor: -2 }));
+namePlate.rotation.x = -Math.PI / 2;
+namePlate.position.set(0, tSurface + 0.002, 0.32);
+cake.add(namePlate);
+
+// ---------- candles ----------
+const CANDLE_H = 0.5;
+const CANDLE_COLORS = [["#f6ecd9", "#c62a43"], ["#f6ecd9", "#5fa774"], ["#f6ecd9", "#e89a2e"], ["#f6ecd9", "#5b7fd1"]];
+const candleGeo = new THREE.CylinderGeometry(0.036, 0.036, CANDLE_H, 20);
+const wickGeo = new THREE.CylinderGeometry(0.0055, 0.0045, 0.07, 6);
+const wickMat = new THREE.MeshStandardMaterial({ color: lin("#1a1210"), roughness: 0.9 });
+const candleMats = CANDLE_COLORS.map(([a, b]) => new THREE.MeshStandardMaterial({ map: stripeTex(a, b), roughness: 0.45 }));
+
+function candleLayout(n) {
+  // candles stand behind the name so they never cover it
+  const out = [];
+  const arc = (count, r, h) => {
+    for (let i = 0; i < count; i++) {
+      const u = count === 1 ? 0.5 : i / (count - 1);
+      const a = -Math.PI / 2 + lerp(-h, h, u);
+      out.push({ x: Math.cos(a) * r, z: Math.sin(a) * r });
+    }
+  };
+  if (n === 1) out.push({ x: 0, z: -0.4 });
+  else if (n <= 9) arc(n, 0.72, Math.min(1.25, 0.18 * (n - 1)));
+  else { arc(Math.ceil(n / 2), 0.8, 1.3); arc(Math.floor(n / 2), 0.52, 1.15); }
+  return out;
+}
+function sprite(tex, additive) {
+  return new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending }));
+}
+
+const candles = candleLayout(N).map((p, i) => {
+  const g = new THREE.Group();
+  g.position.set(p.x, tSurface - 0.02, p.z);
+  cake.add(g);
+  const body = new THREE.Mesh(candleGeo, candleMats[i % candleMats.length]);
+  body.position.y = CANDLE_H / 2;
+  body.rotation.y = rand() * 6.28;
+  g.add(body);
+  const wick = new THREE.Mesh(wickGeo, wickMat);
+  wick.position.y = CANDLE_H + 0.03;
+  g.add(wick);
+  const tipY = CANDLE_H + 0.06;
+  const flame = sprite(flameTex, true); flame.center.set(0.5, 0.06); flame.position.y = tipY - 0.035;
+  const core = sprite(coreTex, true); core.center.set(0.5, 0.06); core.position.y = tipY - 0.035;
+  const glow = sprite(glowTex, true); glow.position.y = tipY + 0.1;
+  const ember = sprite(emberTex, true); ember.position.y = tipY + 0.002; ember.scale.setScalar(0.05); ember.material.opacity = 0;
+  g.add(glow, flame, core, ember);
+  return {
+    g, flame, core, glow, ember, tipY,
+    lit: true, life: 1, vis: 1, relight: 0,
+    resist: 0.75 + Math.random() * 0.7, seed: Math.random() * 100,
+    lean: 0, side: 1, exposure: 1, emberV: 0, smokeT: 0, smokeAcc: 0
+  };
+});
+
+const halo = sprite(glowTex, true);
+halo.position.set(0, tSurface + 0.65, -0.3);
+halo.scale.setScalar(4.2);
+scene.add(halo);
+
+// ---------- smoke ----------
+const smoke = [];
+for (let i = 0; i < 150; i++) {
+  const s = sprite(smokeTex, false);
+  s.visible = false;
+  scene.add(s);
+  smoke.push({ s, active: false, age: 0, max: 1, vx: 0, vy: 0, ph: 0 });
+}
+const tmpV = new THREE.Vector3(), tmpV2 = new THREE.Vector3();
+function spawnSmoke(pos) {
+  const p = smoke.find(q => !q.active);
+  if (!p) return;
+  p.active = true; p.age = 0; p.max = 1.6 + Math.random() * 1.3;
+  p.s.position.copy(pos);
+  p.vx = (Math.random() - 0.5) * 0.06; p.vy = 0.22 + Math.random() * 0.12; p.ph = Math.random() * 6.28;
+  p.s.material.rotation = Math.random() * 6.28;
+  p.s.visible = true;
+}
+
+// ---------- camera framing ----------
+const target = new THREE.Vector3(0, 1.05, 0);
+let dist = 7;
+function frame() {
+  const w = window.innerWidth, h = window.innerHeight, aspect = w / h;
+  renderer.setSize(w, h, false);
+  camera.aspect = aspect;
+  const vf = THREE.MathUtils.degToRad(camera.fov) / 2;
+  const hf = Math.atan(Math.tan(vf) * aspect);
+  const portrait = aspect < 0.9;
+  dist = Math.max(1.95 / Math.tan(hf), (portrait ? 1.7 : 2.5) / Math.tan(vf)) + 0.5;
+  camera.setViewOffset(w, h, 0, h * (portrait ? 0.17 : 0.16), w, h);
+  camera.updateProjectionMatrix();
+  scene.fog.near = dist + 2;
+  scene.fog.far = dist + 12;
+  sizeConfetti();
+}
+
+// ---------- drag to turn ----------
+let dragging = false, lastX = 0, spinVel = 0, rotY = 0, idle = 0;
+canvas.addEventListener("pointerdown", e => {
+  dragging = true; lastX = e.clientX; spinVel = 0;
+  canvas.setPointerCapture(e.pointerId);
+  canvas.classList.add("dragging");
+});
+canvas.addEventListener("pointermove", e => {
+  if (!dragging) return;
+  const dx = e.clientX - lastX; lastX = e.clientX;
+  rotY += dx * 0.008; spinVel = dx * 0.008 * 60;
+});
+const endDrag = () => { dragging = false; idle = 0; canvas.classList.remove("dragging"); };
+canvas.addEventListener("pointerup", endDrag);
+canvas.addEventListener("pointercancel", endDrag);
+
+// ---------- sound ----------
+let actx = null, master = null, noiseBuf = null, muted = false;
+try { muted = localStorage.getItem("cake-muted") === "1"; } catch (e) {}
+function ensureAudio() {
+  if (!actx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    actx = new AC();
+    master = actx.createGain();
+    master.gain.value = muted ? 0 : 0.9;
+    master.connect(actx.destination);
+    noiseBuf = actx.createBuffer(1, actx.sampleRate, actx.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  }
+  if (actx.state === "suspended") actx.resume();
+  return actx;
+}
+function noiseHit(type, freq, peak, len) {
+  if (!actx) return;
+  const n = actx.currentTime;
+  const src = actx.createBufferSource(); src.buffer = noiseBuf;
+  const f = actx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = 0.8;
+  const g = actx.createGain();
+  g.gain.setValueAtTime(0.0001, n);
+  g.gain.exponentialRampToValueAtTime(peak, n + 0.015);
+  g.gain.exponentialRampToValueAtTime(0.0001, n + len);
+  src.connect(f); f.connect(g); g.connect(master);
+  src.start(n); src.stop(n + len + 0.05);
+}
+const puff = () => noiseHit("bandpass", 600 + Math.random() * 500, 0.16, 0.35);
+const pop = () => noiseHit("highpass", 1600, 0.3, 0.14);
+function musicBox() {
+  if (!actx) return;
+  // happy birthday, music-box style
+  const G = 783.99, A = 880, B = 987.77, C = 1046.5, D = 1174.66, E = 1318.51, F = 1396.91, G2 = 1567.98;
+  const tune = [
+    [G, .75], [G, .25], [A, 1], [G, 1], [C, 1], [B, 2],
+    [G, .75], [G, .25], [A, 1], [G, 1], [D, 1], [C, 2],
+    [G, .75], [G, .25], [G2, 1], [E, 1], [C, 1], [B, 1], [A, 2],
+    [F, .75], [F, .25], [E, 1], [C, 1], [D, 1], [C, 3]
+  ];
+  const beat = 0.42;
+  let at = actx.currentTime + 0.05;
+  for (const [fr, b] of tune) {
+    const o = actx.createOscillator(), o2 = actx.createOscillator(), g = actx.createGain(), g2 = actx.createGain();
+    o.type = "sine"; o.frequency.value = fr;
+    o2.type = "sine"; o2.frequency.value = fr * 4.02; g2.gain.value = 0.1;
+    o.connect(g); o2.connect(g2); g2.connect(g); g.connect(master);
+    const ring = Math.max(0.9, b * beat * 1.8);
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.exponentialRampToValueAtTime(0.14, at + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + ring);
+    o.start(at); o2.start(at); o.stop(at + ring + 0.05); o2.stop(at + ring + 0.05);
+    at += b * beat;
+  }
+}
+function setMuted(m) {
+  muted = m;
+  try { localStorage.setItem("cake-muted", m ? "1" : "0"); } catch (e) {}
+  if (master) master.gain.setTargetAtTime(m ? 0 : 0.9, actx.currentTime, 0.05);
+  $("iconOn").hidden = m; $("iconOff").hidden = !m;
+  $("mute").setAttribute("aria-pressed", String(m));
+  $("mute").setAttribute("aria-label", m ? "Turn sound on" : "Mute sound");
+}
+setMuted(muted);
+$("mute").addEventListener("click", () => { ensureAudio(); setMuted(!muted); });
+
+// ---------- input: mic or hold ----------
+let state = "intro";      // intro | calibrating | playing | finale
+let mode = "hold";        // mic | hold
+let lastMode = "hold";
+let stream = null, analyser = null, tbuf = null;
+let calib = { t: 0, vals: [] }, noiseFloor = 0.01;
+let holding = false, holdT = 0;
+let sNow = 0, meterLevel = 0, meterMarkPos = 0.3;
+
+async function startMic() {
+  if (!ensureAudio() || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error("no mic");
+  stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }, video: false });
+  const src = actx.createMediaStreamSource(stream);
+  analyser = actx.createAnalyser();
+  analyser.fftSize = 1024;
+  analyser.smoothingTimeConstant = 0;
+  const sink = actx.createGain(); sink.gain.value = 0;
+  src.connect(analyser); analyser.connect(sink); sink.connect(actx.destination);
+  tbuf = new Float32Array(analyser.fftSize);
+  calib = { t: 0, vals: [] };
+}
+function stopMic() {
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  stream = null; analyser = null;
+}
+function readMic(dt) {
+  if (!analyser) return 0;
+  analyser.getFloatTimeDomainData(tbuf);
+  let sum = 0;
+  for (let i = 0; i < tbuf.length; i++) sum += tbuf[i] * tbuf[i];
+  const rms = Math.sqrt(sum / tbuf.length);
+  const sens = CONFIG.sensitivity || 1;
+  if (state === "calibrating") {
+    calib.vals.push(rms); calib.t += dt;
+    if (calib.t > 0.9) {
+      const m = calib.vals.reduce((a, b) => a + b, 0) / calib.vals.length;
+      const sd = Math.sqrt(calib.vals.reduce((a, b) => a + (b - m) ** 2, 0) / calib.vals.length);
+      noiseFloor = m + 2 * sd;
+      state = "playing";
+    }
+    meterLevel = clamp(rms / 0.35, 0, 1);
+    return 0;
+  }
+  const thr = Math.max(0.055 / sens, noiseFloor * 2.2);
+  const full = thr + 0.22 / sens;
+  const v = clamp((rms - thr) / (full - thr), 0, 1);
+  if (v === 0) noiseFloor = noiseFloor * 0.998 + rms * 0.002;
+  const scale = full * 1.15;
+  meterLevel = clamp(rms / scale, 0, 1);
+  meterMarkPos = thr / scale;
+  return v;
+}
+function noise(t, s) {
+  return Math.sin(t * 11.3 + s) * 0.5 + Math.sin(t * 17.7 + s * 2.1) * 0.3 + Math.sin(t * 31.1 + s * 0.7) * 0.2;
+}
+
+const introPanel = $("introPanel"), playPanel = $("playPanel"), holdBtn = $("hold");
+const statusEl = $("status"), countEl = $("count"), meterFill = $("meterFill"), meterMark = $("meterMark");
+function showPlay(m) {
+  mode = m; lastMode = m;
+  introPanel.hidden = true; playPanel.hidden = false;
+  holdBtn.classList.toggle("main", m === "hold");
+  holdBtn.textContent = m === "hold" ? "Hold to blow" : "Mic not working? Hold here to blow";
+  meterMark.hidden = m !== "mic";
+}
+let notice = "";
+async function beginMic() {
+  showPlay("mic");
+  state = "calibrating";
+  notice = "";
+  try { await startMic(); }
+  catch (e) {
+    stopMic();
+    showPlay("hold");
+    state = "playing";
+    notice = "Couldn't use the mic, so hold the button instead.";
+  }
+}
+$("startMic").addEventListener("click", beginMic);
+$("startHold").addEventListener("click", () => { ensureAudio(); showPlay("hold"); state = "playing"; });
+
+const holdStart = e => {
+  if (state !== "playing" && state !== "calibrating") return;
+  e.preventDefault(); ensureAudio(); holding = true; notice = "";
+  holdBtn.classList.add("active");
+};
+const holdEnd = () => { holding = false; holdBtn.classList.remove("active"); };
+holdBtn.addEventListener("pointerdown", e => { try { holdBtn.setPointerCapture(e.pointerId); } catch (_) {} holdStart(e); });
+["pointerup", "pointercancel", "lostpointercapture"].forEach(ev => holdBtn.addEventListener(ev, holdEnd));
+holdBtn.addEventListener("keydown", e => { if ((e.key === " " || e.key === "Enter") && !e.repeat) holdStart(e); });
+holdBtn.addEventListener("keyup", e => { if (e.key === " " || e.key === "Enter") holdEnd(); });
+holdBtn.addEventListener("contextmenu", e => e.preventDefault());
+
+// ---------- finale ----------
+let room = 0, roomTarget = 0;
+const timers = [];
+const later = (ms, fn) => timers.push(setTimeout(fn, ms));
+const wishEl = $("wish"), noteWrap = $("noteWrap");
+function finale() {
+  state = "finale";
+  stopMic(); holdEnd();
+  playPanel.hidden = true;
+  later(500, () => wishEl.classList.add("show"));
+  later(1700, () => { roomTarget = 1; });
+  later(1850, () => { burst(); pop(); });
+  later(2050, musicBox);
+  later(2600, () => {
+    wishEl.classList.remove("show");
+    noteWrap.hidden = false;
+    $("again").focus({ preventScroll: true });
+  });
+}
+$("again").addEventListener("click", () => {
+  timers.splice(0).forEach(clearTimeout);
+  noteWrap.hidden = true;
+  wishEl.classList.remove("show");
+  roomTarget = 0;
+  candles.forEach((c, i) => { c.relight = 0.35 + i * 0.12; });
+  ensureAudio();
+  if (lastMode === "mic") beginMic();
+  else { showPlay("hold"); state = "playing"; }
+});
+
+// ---------- confetti ----------
+const cc = $("confetti"), cx = cc.getContext("2d");
+let pieces = [];
+function sizeConfetti() {
+  const d = Math.min(window.devicePixelRatio || 1, 2);
+  cc.width = Math.round(window.innerWidth * d);
+  cc.height = Math.round(window.innerHeight * d);
+  cx.setTransform(d, 0, 0, d, 0, 0);
+}
+function burst() {
+  const colors = ["#ffb547", "#c62a43", "#f6ecd9", "#8cc896", "#7fa8ff"];
+  const W = window.innerWidth, H = window.innerHeight;
+  const n = reduceMotion ? 50 : 170;
+  const k = clamp(H / 800, 0.75, 1.3);
+  for (let i = 0; i < n; i++) {
+    const left = i % 2 === 0;
+    const ang = left ? -Math.PI / 2 + 0.3 + Math.random() * 0.6 : -Math.PI / 2 - 0.3 - Math.random() * 0.6;
+    const sp = (reduceMotion ? 500 : 900 + Math.random() * 700) * k;
+    pieces.push({
+      x: left ? -8 : W + 8, y: H * 0.68,
+      vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp,
+      w: 6 + Math.random() * 6, h: 9 + Math.random() * 8,
+      rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 10,
+      flip: Math.random() * 6.28, vf: 5 + Math.random() * 8,
+      ph: Math.random() * 6.28, c: colors[i % colors.length], life: 0
+    });
+  }
+}
+function updateConfetti(dt) {
+  if (!pieces.length) return;
+  const W = window.innerWidth, H = window.innerHeight;
+  cx.clearRect(0, 0, W, H);
+  for (const p of pieces) {
+    p.life += dt;
+    const drag = p.life < 0.55 ? 1.6 : 5;
+    p.vy += 900 * dt;
+    p.vx *= Math.exp(-drag * dt); p.vy *= Math.exp(-drag * dt);
+    p.x += (p.vx + Math.sin(p.life * 3 + p.ph) * 40) * dt;
+    p.y += p.vy * dt;
+    p.rot += p.vr * dt; p.flip += p.vf * dt;
+    cx.save(); cx.translate(p.x, p.y); cx.rotate(p.rot); cx.scale(1, Math.cos(p.flip));
+    cx.fillStyle = p.c; cx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+    cx.restore();
+  }
+  pieces = pieces.filter(p => p.y < H + 40 && p.life < 10);
+  if (!pieces.length) cx.clearRect(0, 0, W, H);
+}
+
+// ---------- main loop ----------
+let t = 0, last = performance.now(), shownStatus = "", shownCount = "";
+function setText(el, s, key) {
+  if (key === "status" ? s !== shownStatus : s !== shownCount) {
+    el.textContent = s;
+    if (key === "status") shownStatus = s; else shownCount = s;
+  }
+}
+function loop(now) {
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now; t += dt;
+
+  // blow strength
+  const relighting = candles.some(c => c.relight > 0);
+  let want = 0;
+  if (state === "calibrating" || state === "playing") {
+    if (mode === "mic") want = readMic(dt);
+    if (holding) { holdT += dt; want = Math.max(want, Math.min(1, holdT / 0.35) * (0.8 + 0.2 * noise(t * 0.3, 4))); }
+    else holdT = 0;
+    if (state === "calibrating" || relighting) want = 0;
+  }
+  sNow = lerp(sNow, want, Math.min(1, dt * (want > sNow ? 14 : 6)));
+
+  // camera
+  const az = reduceMotion ? 0 : Math.sin(t * 0.21) * 0.14;
+  const el = THREE.MathUtils.degToRad(30) + (reduceMotion ? 0 : Math.sin(t * 0.17) * 0.025);
+  camera.position.set(Math.sin(az) * Math.cos(el) * dist, target.y + Math.sin(el) * dist, Math.cos(az) * Math.cos(el) * dist);
+  camera.lookAt(target);
+  camera.updateMatrixWorld();
+
+  // spin
+  if (!dragging) {
+    rotY += spinVel * dt; spinVel *= Math.pow(0.04, dt); idle += dt;
+    rotY = Math.atan2(Math.sin(rotY), Math.cos(rotY));
+    if (idle > 1.2) rotY = lerp(rotY, 0, 1 - Math.pow(0.4, dt));
+  }
+  cake.rotation.y = rotY;
+  cake.updateMatrixWorld();
+
+  // candles
+  const camXZ = tmpV2.set(camera.position.x, 0, camera.position.z).normalize();
+  tmpV.set(0, tSurface, 0).project(camera);
+  const centerX = tmpV.x;
+  let litPower = 0, litCount = 0;
+  for (const c of candles) {
+    if (c.relight > 0) {
+      c.relight -= dt;
+      if (c.relight <= 0) { c.lit = true; c.life = 1; c.relight = 0; c.emberV = 0; }
+    }
+    c.g.getWorldPosition(tmpV);
+    const r = Math.hypot(tmpV.x, tmpV.z) || 1;
+    const front = (tmpV.x * camXZ.x + tmpV.z * camXZ.z) / r * Math.min(1, r / 0.7);
+    c.exposure = 0.55 + 0.45 * (front + 1) / 2;
+    tmpV.project(camera);
+    c.side = tmpV.x - centerX >= 0 ? 1 : -1;
+
+    if (c.lit) {
+      c.vis = Math.min(1, c.vis + dt * 4);
+      if (sNow > 0.04) c.life -= dt * sNow * c.exposure * 2.1 / c.resist;
+      else c.life = Math.min(1, c.life + dt * 0.3);
+      if (c.life <= 0 && state === "playing") {
+        c.lit = false; c.life = 0; c.emberV = 1; c.smokeT = 1.4;
+        puff();
+      }
+    } else {
+      c.vis = Math.max(0, c.vis - dt * 10);
+    }
+
+    const strength = c.vis * (0.45 + 0.55 * Math.max(0, c.life));
+    const gust = sNow * c.exposure;
+    const fl = 1 + noise(t, c.seed) * (0.06 + 0.25 * gust);
+    c.flame.scale.set(0.12 * strength * (1 + 0.25 * gust), 0.3 * strength * fl * (1 - 0.35 * gust), 1);
+    c.core.scale.set(0.075 * strength, 0.2 * strength * fl * (1 - 0.3 * gust), 1);
+    c.lean = lerp(c.lean, -c.side * gust * 1.1 + noise(t * 0.5, c.seed + 3) * 0.06, Math.min(1, dt * 10));
+    c.flame.material.rotation = c.lean;
+    c.core.material.rotation = c.lean * 0.9;
+    c.flame.material.opacity = Math.min(1, strength * 1.2);
+    c.core.material.opacity = Math.min(1, strength * 1.2);
+    c.glow.material.opacity = 0.35 * strength * (0.85 + 0.15 * noise(t, c.seed + 1));
+    c.glow.scale.setScalar(0.75 * (0.7 + 0.3 * strength));
+    c.flame.visible = c.core.visible = c.glow.visible = c.vis > 0.001;
+
+    c.emberV = Math.max(0, c.emberV - dt * 0.45);
+    c.ember.material.opacity = c.lit ? 0 : Math.pow(c.emberV, 1.5) * (0.8 + 0.2 * noise(t * 2, c.seed));
+    if (c.smokeT > 0) {
+      c.smokeT -= dt;
+      c.smokeAcc += dt * (reduceMotion ? 6 : 16);
+      while (c.smokeAcc >= 1) {
+        c.smokeAcc -= 1;
+        c.g.localToWorld(tmpV.set(0, c.tipY + 0.02, 0));
+        spawnSmoke(tmpV);
+      }
+    }
+    litPower += strength;
+    if (c.lit) litCount++;
+  }
+
+  if (state === "playing" && litCount === 0 && !candles.some(c => c.relight > 0)) finale();
+
+  // smoke
+  for (const p of smoke) {
+    if (!p.active) continue;
+    p.age += dt;
+    const k = p.age / p.max;
+    if (k >= 1) { p.active = false; p.s.visible = false; continue; }
+    p.s.position.x += (p.vx + Math.sin(p.age * 3 + p.ph) * 0.06) * dt;
+    p.s.position.y += p.vy * (1 + 0.3 * k) * dt;
+    p.s.scale.setScalar(0.04 + 0.34 * k);
+    p.s.material.opacity = 0.32 * (1 - k) * Math.min(1, p.age * 6);
+    p.s.material.rotation += dt * 0.4;
+  }
+
+  // lights
+  const cf = Math.pow(litPower / N, 0.6);
+  const flick = 0.92 + 0.08 * noise(t * 1.3, 9);
+  room = lerp(room, roomTarget, 1 - Math.pow(0.25, dt));
+  candleLight.position.set(0, tSurface + 0.85, -0.25);
+  candleLight.intensity = cf > 0.001 ? (0.3 + 2.6 * cf) * flick : 0;
+  frontFill.intensity = 1.3 * cf * flick + 0.3 * room;
+  ambient.intensity = 0.2 + 0.3 * room;
+  hemi.intensity = 1.0 * room;
+  halo.material.opacity = 0.2 * cf * flick;
+  scene.background.copy(BG_DARK).lerp(BG_LIT, room);
+  scene.fog.color.copy(FOG_DARK).lerp(FOG_LIT, room);
+
+  renderer.render(scene, camera);
+  updateConfetti(dt);
+
+  // ui
+  if (state === "calibrating" || state === "playing") {
+    let s;
+    if (notice) s = notice;
+    else if (state === "calibrating") s = "Listening to the room. Stay quiet for a second…";
+    else if (relighting) s = "Lighting the candles…";
+    else if (mode === "mic") s = sNow > 0.5 ? "Yes! Keep blowing!" : sNow > 0.05 ? "Harder!" : (coarse ? "Blow at the bottom of your phone." : "Blow into the microphone.");
+    else s = holding ? "Whoosh…" : "Press and hold the button to blow.";
+    setText(statusEl, s, "status");
+    setText(countEl, litCount + " of " + N + " still burning", "count");
+    const level = mode === "mic" ? Math.max(meterLevel, holding ? sNow : 0) : sNow;
+    meterFill.style.transform = "scaleX(" + level.toFixed(3) + ")";
+    meterMark.style.left = (meterMarkPos * 100).toFixed(1) + "%";
+  }
+
+  requestAnimationFrame(loop);
+}
+
+frame();
+window.addEventListener("resize", frame);
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
