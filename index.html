@@ -76,7 +76,11 @@ h1.display{font-size:clamp(1.7rem,6.4vw,2.3rem);color:var(--cream)}
 .note{pointer-events:auto;position:relative;width:100%;max-width:26rem;display:grid;gap:12px;padding:30px 24px 22px;background:var(--paper);color:var(--paper-ink);border-radius:4px;transform:rotate(-1.2deg);box-shadow:0 26px 60px -18px rgba(0,0,0,.75),0 2px 0 rgba(0,0,0,.08);animation:rise .8s cubic-bezier(.2,.8,.2,1) both}
 .note::before{content:"";position:absolute;top:-12px;left:50%;width:96px;height:26px;transform:translateX(-50%) rotate(2.5deg);background:var(--tape);box-shadow:0 1px 2px rgba(0,0,0,.18)}
 .note h2{font-size:clamp(1.6rem,6vw,2.05rem);color:var(--cherry-ink)}
-.note-msg{margin:0;font-family:var(--f-note);font-size:1.18rem;line-height:1.45}
+.note-msg{margin:0;display:grid;gap:.6em;font-family:var(--f-note);font-size:clamp(.95rem,3.9vw,1.06rem);line-height:1.36}
+.stanza{display:block}
+.verse{display:block;padding-left:1.1em;text-indent:-1.1em}
+.couplet{padding-left:1.4em}
+.note-body{display:grid;gap:12px;max-height:calc(100vh - 190px);max-height:calc(100dvh - 190px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));overflow-y:auto;overscroll-behavior:contain;margin-right:-8px;padding-right:8px}
 .note-sign{margin:0;font-family:var(--f-note);font-weight:700;font-size:1.15rem;text-align:right}
 .again{justify-self:start;background:var(--paper-ink);color:var(--paper)}
 .again:focus-visible{outline-color:var(--cherry-ink)}
@@ -126,9 +130,11 @@ h1.display{font-size:clamp(1.7rem,6.4vw,2.3rem);color:var(--cream)}
 
 <div class="note-wrap" id="noteWrap" hidden>
   <article class="note" aria-live="polite">
-    <h2 class="display" id="noteTitle">Happy birthday!</h2>
-    <p class="note-msg" id="noteMsg"></p>
-    <p class="note-sign" id="noteSign"></p>
+    <div class="note-body">
+      <h2 class="display" id="noteTitle">Happy birthday!</h2>
+      <p class="note-msg" id="noteMsg"></p>
+      <p class="note-sign" id="noteSign"></p>
+    </div>
     <button id="again" class="btn again" type="button">Light them again</button>
   </article>
 </div>
@@ -141,10 +147,27 @@ h1.display{font-size:clamp(1.7rem,6.4vw,2.3rem);color:var(--cream)}
 // ---------- edit these ----------
 const CONFIG = {
   name: "Olie",       // written on top of the cake
-  age: 17,            // for "Happy 17th birthday", set to 0 to leave the number out
+  letterName: "mate", // what the birthday letter calls him
+  age: 16,            // for "Happy 17th birthday", set to 0 to leave the number out
   from: "Bryan",
   candles: 7,         // 1 to 14
-  message: "Seventeen looks good on you. Thanks for another year of late-night calls, terrible jokes and pretending to study together. The next es teh is on me.",
+  message: `Now sixteen golden summers dost thou wear,
+And, by my troth, they sit upon thee well;
+No crown of gold could make thee look more fair,
+Though how, in truth, thou manag'st, none can tell.
+
+I thank thee for the calls that braved the night,
+Till owls grew weary and the moon grew pale;
+For jests so dreadful that they turned delight,
+And puns so foul they should be cast in jail.
+
+And for the days we studied, side by side,
+Through tomes and sums till both our eyes grew red;
+With thee, my fellow scholar and my guide,
+No page so hard but, shared, it could be read.
+
+Now rest, and feast, but sharpen well thy blade:
+I count the hours till our next game is played.`,
   sensitivity: 1      // 1.5 if blowing barely does anything, 0.7 if talking blows them out
 };
 // --------------------------------
@@ -163,8 +186,25 @@ function ordinal(n) {
 
 document.title = CONFIG.name + "'s Birthday Cake";
 $("introEyebrow").textContent = "For " + CONFIG.name + " · from " + CONFIG.from;
-$("noteTitle").textContent = CONFIG.age ? "Happy " + ordinal(CONFIG.age) + " birthday, " + CONFIG.name + "!" : "Happy birthday, " + CONFIG.name + "!";
-$("noteMsg").textContent = CONFIG.message;
+const letterName = CONFIG.letterName || CONFIG.name;
+$("noteTitle").textContent = CONFIG.age ? "Happy " + ordinal(CONFIG.age) + " birthday, " + letterName + "!" : "Happy birthday, " + letterName + "!";
+(function renderMessage() {
+  // blank lines split stanzas, a closing two-line stanza is set as the couplet
+  const el = $("noteMsg");
+  const stanzas = String(CONFIG.message).trim().split(/\n\s*\n/);
+  stanzas.forEach((st, i) => {
+    const lines = st.split("\n").map(l => l.trim()).filter(Boolean);
+    const box = document.createElement("span");
+    box.className = "stanza" + (i === stanzas.length - 1 && lines.length === 2 && stanzas.length > 1 ? " couplet" : "");
+    lines.forEach(line => {
+      const v = document.createElement("span");
+      v.className = "verse";
+      v.textContent = line;
+      box.appendChild(v);
+    });
+    el.appendChild(box);
+  });
+})();
 $("noteSign").textContent = "from " + CONFIG.from;
 if (coarse) $("lede").textContent = "This cake can hear you. Turn on the mic and blow at the bottom of your phone like it's a real cake.";
 
